@@ -1,6 +1,7 @@
 #pragma once
 // matrix.hpp
-// This code was given by Dr. Foust, Harding University
+// This code was given by Dr. Foust, Harding University, 
+// added to by Jeremy Campbell for the Laplace project
 #include <vector>
 #include <iterator>
 #include <ostream>

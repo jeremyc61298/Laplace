@@ -1,9 +1,16 @@
+// -----------------------------------------------------------
+// laplace.hpp
+// Jeremy Campbell
+// This class will model Laplace's equation in parallel. 
+// The main data structure is Dr.Foust's matrix, which he gave
+// to us for use in this project.
+// -----------------------------------------------------------
 #pragma once
 #include <mpi.h>
-#include <string>
 #include <iostream>
 #include <ostream>
 #include "matrix.hpp"
+#include "heatmap.hpp"
 
 //#define DEBUG
 
@@ -18,15 +25,14 @@ struct laplace
 	int numCols;
 	int numRowsPerProc;
 	const double SIG_CHANGE;
+	matrix<double> sheet;
+	matrix<double> myChunk;
+	matrix<double> myChange;
 
 	// The "extended" values include the extra rows and columns (Given by Dr. Foust)
 	int extRows() { return numRows + 2; }
 	int extCols() { return numCols + 2; }
 	int extRowsPerProc() { return numRowsPerProc + 2; }
-
-	matrix<double> sheet;
-	matrix<double> myChunk;
-	matrix<double> myChange;
 
 	/* FUNCTIONS */
 	laplace() : numProcs(0), pid(0), numRows(0), numCols(0), 
@@ -43,6 +49,7 @@ struct laplace
 	void printResults(std::ostream& out) const;
 	void print_all_chunks(int tag);
 	double absolute(double num);
+	void finalize();
 };
 
 
@@ -75,7 +82,10 @@ void laplace::inputSpecs()
 			int x1, y1, x2, y2;
 			double heatlvl;
 			std::cin >> x1 >> y1 >> x2 >> y2 >> heatlvl;
-			// non ideal 
+			
+			// non ideal, don't want to pass sheet to it's own function,
+			// however, using *this in that function doesn't allow the 
+			// grid to fill properly
 			sheet.fill_region(heatlvl, sheet, x1, y1, x2, y2);
 		}
 	}
@@ -125,6 +135,8 @@ void laplace::solve()
 	} while (someoneChanged == 1);
 }
 
+// Each process averages each slot in 
+// the matrix with it's surrounding slots
 int laplace::average()
 {
 	int changed = 0;
@@ -142,11 +154,11 @@ int laplace::average()
 	return changed;
 }
 
+// Send and Receive the last row that was changed, then the first row that was changed
+// Note, process 0 does nothing with it's first two rows, while process numProcs - 1 does
+// nothing with it's last two rows. 
 void laplace::shareChangedRows()
 {
-	// Send and Receive the last row that was changed, then the first row that was changed
-	// Note, process 0 does nothing with it's first two rows, while process numProcs - 1 does
-	// nothing with it's last two rows. 
 	if (pid != numProcs - 1)
 		MPI_Send(myChange[numRowsPerProc], extCols(), MPI_DOUBLE, pid + 1, 0, MPI_COMM_WORLD);
 
@@ -166,13 +178,14 @@ void laplace::collectResults()
 		sheet[1], numRowsPerProc * extCols(), MPI_DOUBLE, 0, MPI_COMM_WORLD);
 }
 
+// Prints to an ostream
 void laplace::printResults(std::ostream& out) const
 {
 	if (pid == 0)
 		sheet.print(out);
 }
 
-// For Pleiades
+// Prints a picture
 void laplace::printResults()
 {
 	if (pid == 0)
@@ -190,6 +203,7 @@ void laplace::printResults()
 	}	
 }
 
+// Debug function
 void laplace::print_all_chunks(int tag) {
 	for (int i = 0; i < numProcs; ++i) {
 		if (pid == i) {
@@ -199,10 +213,16 @@ void laplace::print_all_chunks(int tag) {
 	}
 }
 
+// Calculates the absolute value of a double
 double laplace::absolute(double num)
 {
 	double result = num;
 	if (num < 0)
 		result *= -1;
 	return result;
+}
+
+void laplace::finalize()
+{
+	MPI_Finalize();
 }
