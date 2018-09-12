@@ -81,7 +81,6 @@ namespace my {
 		}
 
 		// Added by Jeremy Campbell 9/11/18
-		template<typename T>
 		void operator=(const matrix& m) {
 			_elements = m._elements;
 			_num_cols = m.num_cols();

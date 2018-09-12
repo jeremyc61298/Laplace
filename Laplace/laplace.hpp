@@ -5,6 +5,8 @@
 #include <ostream>
 #include "matrix.hpp"
 
+//#define DEBUG
+
 using my::matrix;
 
 struct laplace
@@ -15,7 +17,7 @@ struct laplace
 	int numRows;
 	int numCols;
 	int numRowsPerProc;
-	const double SIG_CHANGE = 0.001;
+	const double SIG_CHANGE;
 
 	// The "extended" values include the extra rows and columns (Given by Dr. Foust)
 	int extRows() { return numRows + 2; }
@@ -27,22 +29,20 @@ struct laplace
 	matrix<double> myChange;
 
 	/* FUNCTIONS */
-	laplace() : numProcs(0), pid(0), numRows(0), numCols(0), numRowsPerProc(0) {}
+	laplace() : numProcs(0), pid(0), numRows(0), numCols(0), 
+		numRowsPerProc(0), SIG_CHANGE(0.000001) {}
 	void initMPI(int argc, char* argv[]);
 	void inputSpecs();
 	void shareInput();
 	void distributeRows();
 	void solve();
-	int average();
+	int	 average();
 	void shareChangedRows();
 	void collectResults();
+	void printResults();
 	void printResults(std::ostream& out) const;
-
 	void print_all_chunks(int tag);
-
-	void log(const std::string& message) {
-		std::cout << pid << ": " << message << std::endl;
-	}
+	double absolute(double num);
 };
 
 
@@ -99,9 +99,9 @@ void laplace::distributeRows()
 			myChunk.data()[i] = sheet.data()[i];
 		}
 		// Send
-		for (int i = 1; i < numProcs; i++)
+		for (int i = numRowsPerProc; i < numRows; i += numRowsPerProc)
 		{
-			MPI_Send(sheet[i], extRowsPerProc() * extCols(), MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
+			MPI_Send(sheet[i], extRowsPerProc() * extCols(), MPI_DOUBLE, i / numRowsPerProc, 0, MPI_COMM_WORLD);
 		}
 	}
 	else
@@ -135,7 +135,7 @@ int laplace::average()
 			double sum = myChunk[i - 1][j] + myChunk[i][j + 1] + myChunk[i + 1][j] + myChunk[i][j - 1];
 			myChange[i][j] = sum / 4;
 
-			if (myChange[i][j] - myChunk[i][j] > SIG_CHANGE)
+			if (absolute(myChange[i][j] - myChunk[i][j]) > SIG_CHANGE)
 				changed = 1;
 		}
 	}
@@ -172,6 +172,23 @@ void laplace::printResults(std::ostream& out) const
 		sheet.print(out);
 }
 
+// For Pleiades
+void laplace::printResults()
+{
+	if (pid == 0)
+	{
+		my::heatmap map;
+		map.sheet = sheet.data();           // pointer to the 2-dimensional array
+		map.num_cols = extCols();          // total number of columns in each row
+		map.top_row = 1;                            // 
+		map.left_col = 1;                           //  |__ The part of the array to include in the image
+		map.bottom_row = extRows() - 1;    //  |   (includes top & left, excludes bottom & right)
+		map.right_col = extCols() - 1;     // /
+		map.scale = 8;                              // How much to scale the image by
+		map.file_name = "sheet.png";                // File to save it in
+		map.print_to_file();
+	}	
+}
 
 void laplace::print_all_chunks(int tag) {
 	for (int i = 0; i < numProcs; ++i) {
@@ -180,4 +197,12 @@ void laplace::print_all_chunks(int tag) {
 		}
 		MPI_Barrier(MPI_COMM_WORLD);
 	}
+}
+
+double laplace::absolute(double num)
+{
+	double result = num;
+	if (num < 0)
+		result *= -1;
+	return result;
 }
