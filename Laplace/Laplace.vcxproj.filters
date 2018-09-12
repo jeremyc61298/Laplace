@@ -23,5 +23,8 @@
     <ClInclude Include="matrix.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="laplace.hpp">
+      <Filter>Source Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
