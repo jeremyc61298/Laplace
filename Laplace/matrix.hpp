@@ -1,7 +1,4 @@
 #pragma once
-// matrix.hpp
-// This code was given by Dr. Foust, Harding University, 
-// added to by Jeremy Campbell for the Laplace project
 #include <vector>
 #include <iterator>
 #include <ostream>
@@ -55,37 +52,14 @@ namespace my {
 			return _elements.data();
 		}
 
-		// Added by Jeremy Campbell 9/11/18
-		void fill(T item) {
-			std::fill(_elements.begin(), _elements.end(), item);
-		}
-
-		// Added by Jeremy Campbell 9/11/18
-		void fill_region(T item, matrix &m, int x1, int y1, int x2, int y2) {
-			for (int i = x1; i <= x2; i++) {
-				for (int j = y1; j <= y2; j++) {
-					m[i][j] = item;
-				}
-			}
-		}
-
 		void print(std::ostream& os) const {
-			os << std::setprecision(4) << std::showpoint << "-\n";
+			os << fixed << std::setprecision(3);
 			for (size_t r = 0; r < _num_rows; ++r) {
-				os << "| ";
 				for (size_t c = 0; c < _num_cols; ++c) {
 					os << _elements[r * _num_cols + c] << ' ';
 				}
 				os << '\n';
 			}
-			os << '-' << std::endl;
-		}
-
-		// Added by Jeremy Campbell 9/11/18
-		void operator=(const matrix& m) {
-			_elements = m._elements;
-			_num_cols = m.num_cols();
-			_num_rows = m.num_rows();
 		}
 	};
 

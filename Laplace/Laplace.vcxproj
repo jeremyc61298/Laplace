@@ -153,6 +153,9 @@
   <ItemGroup>
     <None Include="packages.config" />
   </ItemGroup>
+  <ItemGroup>
+    <Text Include="README.txt" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
     <Import Project="..\packages\zlib.redist.1.2.7.32\build\native\zlib.redist.targets" Condition="Exists('..\packages\zlib.redist.1.2.7.32\build\native\zlib.redist.targets')" />
